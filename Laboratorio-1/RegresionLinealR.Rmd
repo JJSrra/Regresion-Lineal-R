@@ -1,0 +1,106 @@
+---
+title: "Regresión Lineal R - Laboratorio 1"
+author: "Juanjo Sierra"
+date: "28 de noviembre de 2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Regresión Lineal con R - Laboratorio 1
+
+En primer lugar hay que leer el dataset que se va a utilizar, ubicado en la carpeta 'Datos': `california.dat`. El dataset está en formato KEEL.
+
+```{r}
+california = read.csv("../Datos/california.dat", header = FALSE, comment.char = "@")
+head(california)
+```
+
+Se asignan los nombres de las variables adecuadamente.
+
+```{r}
+names(california) = c("Longitude", "Latitude", "HousingMedianAge",
+"TotalRooms", "TotalBedrooms", "Population", "Households",
+"MedianIncome", "MedianHouseValue")
+
+head(california)
+```
+
+Vamos a visualizar todas las variables entre sí y respecto a la salida.
+
+```{r}
+temp = california
+plotY <- function (x,y) {
+plot(temp[,y]~temp[,x], xlab=paste(names(temp)[x]," X",x,sep=""),
+ylab=names(temp)[y])
+}
+par(mfrow=c(3,3)) # Fijar ventana para gráficas
+x = sapply(1:(dim(temp)[2]-1), plotY, dim(temp)[2])
+par(mfrow=c(1,1)) # Cambiar el tipo de ventana a 1,1 otra vez
+```
+
+La única variable que podría resultar interesante parece ser MedianIncome. Podemos ampliar el gráfico para verla con más claridad.
+
+```{r}
+plotY(8,dim(temp)[2])
+```
+
+Podemos probar a realizar un modelo lineal utilizando únicamente esta variable. Para ello vamos a utilizar la función `lm`.
+
+```{r}
+fit1 = lm(MedianHouseValue~MedianIncome, data=california)
+summary(fit1)
+```
+
+El p-value del F-statistic nos sirve para calcular la confianza con la que afirmar que las variables mantienen una relación lineal (1 - p-value * 100 = % confianza). Ya que el p-value del F-statistic es muy pequeño la confianza es alta, con un modelo realizado con la variable MedianIncome el error de 0.4734 (nos fijamos en el Adjusted R-squared) es casi asegurado.
+
+Podemos también probar a añadir una nueva variable al modelo, generando así un **modelo lineal múltiple**. Como ninguna variable parece especialmente prometedora, vamos a probar con TotalBedrooms, que al menos semánticamente parece relevante.
+
+```{r}
+fit2 = lm(MedianHouseValue~MedianIncome + TotalBedrooms, data=california)
+summary(fit2)
+```
+
+
+```{r}
+fit3 = lm(MedianHouseValue~MedianIncome + TotalBedrooms + TotalRooms, data=california)
+summary(fit3)
+```
+
+
+```{r}
+fit4 = lm(MedianHouseValue~MedianIncome + TotalBedrooms + TotalRooms + Households, data=california)
+summary(fit4)
+```
+
+Vamos a hacerlo a la inversa: comenzamos con el modelo que tiene todas las variables y vamos eliminando las menos prometedoras.
+
+```{r}
+fit5 = lm(MedianHouseValue~., data=california)
+summary(fit5)
+```
+
+Se observa un incremento considerable en el valor del R-squared del modelo, aunque también se ha incrementado su complejidad al añadir todas las variables. Se puede eliminar aquella que tiene el p-value más alto (es la menos prometedora) para ver si puede mejorar aún más.
+
+```{r}
+fit6 = lm(MedianHouseValue~.-Households, data=california)
+summary(fit6)
+```
+
+El acierto del modelo disminuye muy poco (menos de un 1%) y le estamos restando complejidad, así que podemos seguir probando a eliminar variables. Como todas tienen un p-value similar ahora mismo, nos guiamos por las gráficas, y eliminamos la variable HousingMedianAge que no parece nada lineal.
+
+```{r}
+fit7 = lm(MedianHouseValue~.-Households-HousingMedianAge, data=california)
+summary(fit7)
+```
+
+Ha descendido un 1% el R-squared pero para eliminar complejidad es un justo precio a pagar. Podemos seguir así eliminando variables, probando ahora con Population.
+
+```{r}
+fit8 = lm(MedianHouseValue~.-Households-HousingMedianAge-Population, data=california)
+summary(fit8)
+```
+
+Eliminando esta variable el R-squared desciende por debajo de un 0.6, y aquí consideramos que es mejor mantener el modelo anterior y primar en este caso la precisión frente a la complejidad.
