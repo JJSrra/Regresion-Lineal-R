@@ -47,6 +47,8 @@ La única variable que podría resultar interesante parece ser MedianIncome. Pod
 plotY(8,dim(temp)[2])
 ```
 
+## Modelos lineales mútiples
+
 Podemos probar a realizar un modelo lineal utilizando únicamente esta variable. Para ello vamos a utilizar la función `lm`.
 
 ```{r}
@@ -104,3 +106,54 @@ summary(fit8)
 ```
 
 Eliminando esta variable el R-squared desciende por debajo de un 0.6, y aquí consideramos que es mejor mantener el modelo anterior y primar en este caso la precisión frente a la complejidad.
+
+## Interacciones
+
+Vamos a realizar algunas interacciones entre las variables más prometedoras que hemos encontrado realizando los modelos lineales. MedianIncome parecía ser la más interesante, realizaremos el producto entre ella y TotalBedrooms.
+
+```{r}
+fit9 = lm(MedianHouseValue~MedianIncome*TotalBedrooms, data=california)
+summary(fit9)
+```
+
+Vemos que el p-value de TotalBedrooms crece un poco y que el de la variable resultante es demasiado alto. Además el R-squared obtenido no es nada reseñable. Cambiamos y probamos la variable HousingMedianAge.
+
+```{r}
+fit10 = lm(MedianHouseValue~MedianIncome*HousingMedianAge, data=california)
+summary(fit10)
+```
+
+Esta variable mejora el modelo cuando se realiza el producto, por lo que es mejor que el modelo simple que se ha tomado como base. Comprobemos qué pasa si ahora añadimos la variable TotalBedrooms.
+
+```{r}
+fit11 = lm(MedianHouseValue~MedianIncome*HousingMedianAge*TotalBedrooms, data=california)
+summary(fit11)
+```
+
+Ahora el resultado es mejor que al añadir solamente TotalBedrooms y MedianIncome. Y es que el producto de ambas tiene un p-value muy alto, pero la variable resultante de multiplicar las tres da un p-value bajo y el R-squared del modelo es sustancialmente mejor, por lo que aceptamos esta combinación como un mejor modelo.
+
+## No linealidad
+
+A continuación vamos a probar la no linealidad de alguna variable en un modelo simple. Podemos probar con MedianIncome, que parece intuir una curva cuadrática.
+
+```{r}
+fit12 = lm(MedianHouseValue~MedianIncome+I(MedianIncome^2), data=california)
+summary(fit12)
+```
+
+El ajuste del modelo no muestra un gran cambio. Podemos comprobar cómo se ajusta el modelo a los valores de la variable.
+
+```{r}
+plot(california$MedianHouseValue~california$MedianIncome)
+points(california$MedianIncome,fitted(fit12),col="red",pch=20)
+```
+
+Podemos probar esta no linealidad de la variable MedianIncome dentro del mejor modelo que hemos encontrado hasta ahora, el que contenía las variables MedianIncome, Latitude, Longitude, TotalRooms, TotalBedrooms y Population.
+
+```{r}
+fit13 = lm(MedianHouseValue~.+I(MedianIncome^2)-HousingMedianAge-Households,
+        data=california)
+summary(fit13)
+```
+
+El nuevo modelo ha mejorado al anterior, pero es más complejo y la mejora es poco sustancial (menos de un 1%), por lo que no merece la pena.
