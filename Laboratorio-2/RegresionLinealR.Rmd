@@ -1,0 +1,136 @@
+---
+title: "Regresión Lineal R - Laboratorio 2"
+author: "Juanjo Sierra"
+date: "28 de noviembre de 2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Regresión Lineal con R - Laboratorio 2
+
+En primer lugar hay que leer el dataset que se va a utilizar, ubicado en la carpeta 'Datos': `california.dat`. El dataset está en formato KEEL.
+
+```{r}
+california = read.csv("../Datos/california.dat", header = FALSE, comment.char = "@")
+head(california)
+```
+
+Se asignan los nombres de las variables adecuadamente.
+
+```{r}
+names(california) = c("Longitude", "Latitude", "HousingMedianAge",
+"TotalRooms", "TotalBedrooms", "Population", "Households",
+"MedianIncome", "MedianHouseValue")
+
+head(california)
+```
+
+## Aplicación de K-NN
+
+Para poder trabajar con K-NN vamos a importar el paquete `kknn` de R.
+
+```{r}
+require("kknn")
+```
+
+Ahora podemos realizar un modelo para el conjunto de datos de California utilizando el algoritmo K-NN. Por ahora utilizamos el mismo conjunto para train y para test.
+
+```{r}
+fitknn1 = kknn(MedianHouseValue ~ ., california, california)
+names(fitknn1)
+```
+
+Los valores aproximados por el modelo para los ejemplos de test se pueden comprobar accediendo al atributo `fitted.values`.
+
+```{r}
+head(fitknn1$fitted.values)
+```
+
+Podemos comprobar gráficamente la similitud de estos valores con los conocidos (recordemos que por ahora train == test) mostrando ambos en la misma gráfica.
+
+```{r}
+plot(california$MedianHouseValue~california$MedianIncome)
+points(california$MedianIncome,fitknn1$fitted.values,col="blue",pch=20)
+```
+
+Se puede calcular la _Raíz del Error Cuadrático Medio_ con (RMSE) manualmente con el siguiente fragmento de código:
+
+```{r}
+yprime = fitknn1$fitted.values
+sqrt(sum((california$MedianHouseValue-yprime)^2)/length(yprime))
+```
+
+## Validación cruzada
+
+Vamos a realizar ahora los experimentos con la técnica de validación cruzada. Para ello vamos a crear una función para leer las distintas particiones del conjunto de datos original ubicadas en la carpeta `Datos`, y poder crear modelos lineales con dichos datos. Probaremos con un modelo lineal que contenga todas las variables.
+
+```{r}
+nombre = "../Datos/california"
+run_lm_fold <- function(i, x, tt = "test") {
+  file <- paste(x, "-5-", i, "tra.dat", sep="")
+  x_tra <- read.csv(file, comment.char="@")
+  file <- paste(x, "-5-", i, "tst.dat", sep="")
+  x_tst <- read.csv(file, comment.char="@")
+  In <- length(names(x_tra)) - 1
+  names(x_tra)[1:In] <- paste ("X", 1:In, sep="")
+  names(x_tra)[In+1] <- "Y"
+  names(x_tst)[1:In] <- paste ("X", 1:In, sep="")
+  names(x_tst)[In+1] <- "Y"
+  
+  if (tt == "train") {
+    test <- x_tra
+  }
+  else {
+    test <- x_tst
+  }
+  
+  fitMulti=lm(Y~.,x_tra)
+  yprime=predict(fitMulti,test)
+  sum(abs(test$Y-yprime)^2)/length(yprime) ##MSE
+}
+
+lmMSEtrain<-mean(sapply(1:5,run_lm_fold,nombre,"train"))
+lmMSEtest<-mean(sapply(1:5,run_lm_fold,nombre,"test"))
+
+lmMSEtrain
+lmMSEtest
+```
+
+En base a los resultados obtenidos, observamos que en test se obtiene de media un error mayor que en train, que es el comportamiento habitual puesto que no se ha entrenado con dichos datos.
+
+Comparemos con los resultados que se obtienen con el algoritmo K-NN.
+
+```{r}
+run_knn_fold <- function(i, x, tt = "test") {
+  file <- paste(x, "-5-", i, "tra.dat", sep="")
+  x_tra <- read.csv(file, comment.char="@")
+  file <- paste(x, "-5-", i, "tst.dat", sep="")
+  x_tst <- read.csv(file, comment.char="@")
+  In <- length(names(x_tra)) - 1
+  names(x_tra)[1:In] <- paste ("X", 1:In, sep="")
+  names(x_tra)[In+1] <- "Y"
+  names(x_tst)[1:In] <- paste ("X", 1:In, sep="")
+  names(x_tst)[In+1] <- "Y"
+  
+  if (tt == "train") {
+    test <- x_tra
+  }
+  else {
+    test <- x_tst
+  }
+  
+  fitMulti=kknn(Y~.,x_tra,test)
+  yprime=fitMulti$fitted.values
+  sum(abs(test$Y-yprime)^2)/length(yprime) ##MSE
+}
+knnMSEtrain<-mean(sapply(1:5,run_knn_fold,nombre,"train"))
+knnMSEtest<-mean(sapply(1:5,run_knn_fold,nombre,"test"))
+
+knnMSEtrain
+knnMSEtest
+```
+
+Como es entendible por la distribución de los puntos que hemos visualizado antes, K-NN obtendrá un error menor en el conjunto de entrenamiento, pero ese error difiere mucho del que hay a posteriori en el conjunto de prueba. Sin embargo, sigue siendo un error menor que el que encuentra el modelo lineal.
