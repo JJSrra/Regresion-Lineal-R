@@ -65,19 +65,21 @@ fit2 = lm(MedianHouseValue~MedianIncome + TotalBedrooms, data=california)
 summary(fit2)
 ```
 
+La variable TotalBedrooms de por sí no aporta mucho al modelo, ya que añadiéndola simplemente aumenta un 0.3% el R-squared, y sin embargo estamos aumentando su complejidad. Probemos a añadir una tercera variable, TotalRooms, que sigue una distribución aparentemente similar.
 
 ```{r}
 fit3 = lm(MedianHouseValue~MedianIncome + TotalBedrooms + TotalRooms, data=california)
 summary(fit3)
 ```
 
+Como el R-squared ha aumentado y el p-value sigue siendo lo suficientemente pequeño como para garantizar una alta confianza, podemos seguir aumentando variables para el modelo. Vamos a probar Households que también parece seguir una distribución parecida.
 
 ```{r}
 fit4 = lm(MedianHouseValue~MedianIncome + TotalBedrooms + TotalRooms + Households, data=california)
 summary(fit4)
 ```
 
-Vamos a hacerlo a la inversa: comenzamos con el modelo que tiene todas las variables y vamos eliminando las menos prometedoras.
+Llegados a este punto, esta variable aumenta complejidad pero el modelo no mejora prácticamente nada, por lo que no merecería la pena añadirla. El modelo que utiliza MedianIncome, TotalBedrooms y TotalRooms es el mejor dentro de los que tienen poca complejidad que hemos podido encontrar. Vamos a hacerlo ahora a la inversa: comenzamos con el modelo que tiene todas las variables y vamos eliminando las menos prometedoras.
 
 ```{r}
 fit5 = lm(MedianHouseValue~., data=california)
@@ -156,4 +158,4 @@ fit13 = lm(MedianHouseValue~.+I(MedianIncome^2)-HousingMedianAge-Households,
 summary(fit13)
 ```
 
-El nuevo modelo ha mejorado al anterior, pero es más complejo y la mejora es poco sustancial (menos de un 1%), por lo que no merece la pena.
+El nuevo modelo ha mejorado al anterior, pero es más complejo y la mejora es poco sustancial (menos de un 1%), por lo que no merece la pena. El mejor modelo encontrado, y que tiene un buen balance complejidad/acierto es el que tiene todas las variables menos Households y HousingMedianAge.
